@@ -1,13 +1,16 @@
 import { useState, useCallback } from 'react';
 import { Scissors } from 'lucide-react';
 import { formatDuration } from '../../lib/formatters';
+import { TrimPreview } from './TrimPreview';
 
 interface TrimSliderProps {
+  videoId: string;
+  videoTitle: string;
   duration: number; // total duration in seconds
   onTrimChange: (trim: { start: number; end: number } | null) => void;
 }
 
-export function TrimSlider({ duration, onTrimChange }: TrimSliderProps) {
+export function TrimSlider({ videoId, videoTitle, duration, onTrimChange }: TrimSliderProps) {
   const [enabled, setEnabled] = useState(false);
   const [start, setStart] = useState(0);
   const [end, setEnd] = useState(duration);
@@ -61,7 +64,15 @@ export function TrimSlider({ duration, onTrimChange }: TrimSliderProps) {
       </button>
 
       {enabled && (
-        <div className="mt-4 space-y-3">
+        <div className="mt-4 space-y-4">
+          {/* Preview player */}
+          <TrimPreview
+            videoId={videoId}
+            start={start}
+            end={end}
+            title={videoTitle}
+          />
+
           {/* Visual range bar */}
           <div className="relative h-2 rounded-full bg-white/10">
             <div

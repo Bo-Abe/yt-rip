@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useConverterStore } from '../features/converter/store';
 import { VideoList } from '../components/video/VideoList';
@@ -14,13 +14,22 @@ import { api } from '../lib/api';
 function ResultsPage() {
   const navigate = useNavigate();
   const store = useConverterStore();
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Average duration of selected videos (for trim slider)
-  const avgDuration = useMemo(() => {
-    const selected = store.videos.filter((v) => store.selectedIds.has(v.id));
-    if (selected.length === 0) return 0;
-    // Use the max duration for the trim slider
-    return Math.max(...selected.map((v) => v.duration));
+  // Filter videos by search
+  const filteredVideos = useMemo(() => {
+    if (!searchQuery.trim()) return store.videos;
+    const q = searchQuery.toLowerCase();
+    return store.videos.filter(
+      (v) => v.title.toLowerCase().includes(q) || v.channel.toLowerCase().includes(q),
+    );
+  }, [store.videos, searchQuery]);
+
+  // Get the single selected video (for trim slider + preview)
+  const selectedVideo = useMemo(() => {
+    if (store.selectedIds.size !== 1) return null;
+    const id = Array.from(store.selectedIds)[0];
+    return store.videos.find((v) => v.id === id) ?? null;
   }, [store.videos, store.selectedIds]);
 
   if (store.videos.length === 0) {
@@ -90,6 +99,18 @@ function ResultsPage() {
             </h1>
             <p className="mt-1 text-sm text-white/40">{store.videos.length} videos found</p>
           </div>
+          {store.videos.length > 5 && (
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search videos..."
+                className="input-field !py-2 !pl-9 !pr-4 text-sm"
+              />
+            </div>
+          )}
         </div>
       </motion.div>
 
@@ -122,9 +143,11 @@ function ResultsPage() {
             onBitrateChange={store.setAudioBitrate}
             onQualityChange={store.setVideoQuality}
           />
-          {avgDuration > 0 && store.selectedIds.size === 1 && (
+          {selectedVideo && selectedVideo.duration > 0 && (
             <TrimSlider
-              duration={avgDuration}
+              videoId={selectedVideo.id}
+              videoTitle={selectedVideo.title}
+              duration={selectedVideo.duration}
               onTrimChange={store.setTrim}
             />
           )}
@@ -133,10 +156,15 @@ function ResultsPage() {
 
       {/* Video grid */}
       <VideoList
-        videos={store.videos}
+        videos={filteredVideos}
         selectedIds={store.selectedIds}
         onToggle={store.toggleSelect}
       />
+      {searchQuery && filteredVideos.length === 0 && (
+        <p className="mt-8 text-center text-sm text-white/30">
+          No videos matching &ldquo;{searchQuery}&rdquo;
+        </p>
+      )}
     </div>
   );
 }
