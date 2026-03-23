@@ -9,7 +9,7 @@ import { api } from '../lib/api';
 
 function ConversionPage() {
   const navigate = useNavigate();
-  const { jobs, updateJob } = useConverterStore();
+  const { jobs, updateJob, addToHistory } = useConverterStore();
 
   // Subscribe to SSE for ALL active jobs
   const activeJobIds = useMemo(
@@ -20,8 +20,18 @@ function ConversionPage() {
   const handleSSEUpdate = useCallback(
     (updated: import('../../shared/types').ConversionJob) => {
       updateJob(updated.id, updated);
+      // Save to history when done
+      if (updated.status === 'done') {
+        addToHistory({
+          id: updated.id,
+          videoTitle: updated.videoTitle,
+          format: updated.format,
+          fileSize: updated.fileSize,
+          convertedAt: new Date().toISOString(),
+        });
+      }
     },
-    [updateJob],
+    [updateJob, addToHistory],
   );
 
   useMultiSSE(activeJobIds, handleSSEUpdate);

@@ -138,6 +138,14 @@ async function processConversion(
       cmd = cmd.setStartTime(params.trim.start).setDuration(params.trim.end - params.trim.start);
     }
 
+    // Embed metadata (title, artist)
+    if (params.embedMetadata) {
+      cmd = cmd.outputOptions([
+        '-metadata', `title=${job.videoTitle}`,
+        '-metadata', `artist=${job.videoTitle.split(' - ')[0] || 'Unknown'}`,
+      ]);
+    }
+
     // Audio settings
     if (isAudio) {
       const bitrate = params.audioBitrate || 192;

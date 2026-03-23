@@ -5,6 +5,7 @@ import { Download, Zap, History } from 'lucide-react';
 const navItems = [
   { path: '/', label: 'Convert', icon: Zap },
   { path: '/conversion', label: 'Downloads', icon: Download },
+  { path: '/history', label: 'History', icon: History },
 ];
 
 export function Header() {

@@ -5,7 +5,16 @@ import type {
   AudioBitrate,
   VideoQuality,
   ConversionJob,
+  TrimOptions,
 } from '../../../shared/types';
+
+interface HistoryEntry {
+  id: string;
+  videoTitle: string;
+  format: OutputFormat;
+  fileSize?: number;
+  convertedAt: string;
+}
 
 interface ConverterState {
   // URL & Videos
@@ -23,9 +32,13 @@ interface ConverterState {
   format: OutputFormat;
   audioBitrate: AudioBitrate;
   videoQuality: VideoQuality;
+  trim: TrimOptions | null;
 
   // Jobs
   jobs: ConversionJob[];
+
+  // History
+  history: HistoryEntry[];
 
   // Actions
   setUrl: (url: string) => void;
@@ -38,9 +51,26 @@ interface ConverterState {
   setFormat: (format: OutputFormat) => void;
   setAudioBitrate: (bitrate: AudioBitrate) => void;
   setVideoQuality: (quality: VideoQuality) => void;
+  setTrim: (trim: TrimOptions | null) => void;
   setJobs: (jobs: ConversionJob[]) => void;
   updateJob: (id: string, update: Partial<ConversionJob>) => void;
+  addToHistory: (entry: HistoryEntry) => void;
+  clearHistory: () => void;
   reset: () => void;
+}
+
+// Load history from localStorage
+function loadHistory(): HistoryEntry[] {
+  try {
+    const raw = localStorage.getItem('ytrip_history');
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(history: HistoryEntry[]): void {
+  localStorage.setItem('ytrip_history', JSON.stringify(history.slice(0, 200)));
 }
 
 export const useConverterStore = create<ConverterState>((set, get) => ({
@@ -54,7 +84,9 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
   format: 'mp3',
   audioBitrate: 192,
   videoQuality: '720p',
+  trim: null,
   jobs: [],
+  history: loadHistory(),
 
   setUrl: (url) => set({ url }),
   setVideos: (videos, channelName, playlistTitle) =>
@@ -74,12 +106,23 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
   setFormat: (format) => set({ format }),
   setAudioBitrate: (audioBitrate) => set({ audioBitrate }),
   setVideoQuality: (videoQuality) => set({ videoQuality }),
+  setTrim: (trim) => set({ trim }),
 
   setJobs: (jobs) => set({ jobs }),
   updateJob: (id, update) =>
     set({
       jobs: get().jobs.map((j) => (j.id === id ? { ...j, ...update } : j)),
     }),
+
+  addToHistory: (entry) => {
+    const history = [entry, ...get().history].slice(0, 200);
+    saveHistory(history);
+    set({ history });
+  },
+  clearHistory: () => {
+    localStorage.removeItem('ytrip_history');
+    set({ history: [] });
+  },
 
   reset: () =>
     set({
@@ -90,6 +133,7 @@ export const useConverterStore = create<ConverterState>((set, get) => ({
       isLoading: false,
       error: null,
       selectedIds: new Set(),
+      trim: null,
       jobs: [],
     }),
 }));

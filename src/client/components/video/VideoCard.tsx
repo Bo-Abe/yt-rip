@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Clock, Eye, Check } from 'lucide-react';
+import { Eye, Check, ImageDown } from 'lucide-react';
 import type { VideoInfo } from '../../../shared/types';
 import { formatDuration, formatViews } from '../../lib/formatters';
 
@@ -10,6 +10,17 @@ interface VideoCardProps {
 }
 
 export function VideoCard({ video, isSelected, onToggle }: VideoCardProps) {
+  function handleThumbnailDownload(e: React.MouseEvent) {
+    e.stopPropagation();
+    // Get max resolution thumbnail
+    const hdUrl = `https://i.ytimg.com/vi/${video.id}/maxresdefault.jpg`;
+    const a = document.createElement('a');
+    a.href = hdUrl;
+    a.download = `${video.title}.jpg`;
+    a.target = '_blank';
+    a.click();
+  }
+
   return (
     <motion.div
       layout
@@ -42,6 +53,14 @@ export function VideoCard({ video, isSelected, onToggle }: VideoCardProps) {
         >
           {isSelected && <Check className="h-4 w-4 text-white" />}
         </div>
+        {/* Thumbnail download button */}
+        <button
+          onClick={handleThumbnailDownload}
+          className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-md bg-black/60 text-white/60 opacity-0 transition-all hover:bg-black/80 hover:text-white group-hover:opacity-100"
+          title="Download thumbnail"
+        >
+          <ImageDown className="h-3.5 w-3.5" />
+        </button>
       </div>
 
       {/* Info */}

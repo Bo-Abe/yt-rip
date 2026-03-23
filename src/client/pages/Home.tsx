@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search, Link2, Zap, Music, Film, Shield } from 'lucide-react';
@@ -10,6 +10,30 @@ function HomePage() {
   const navigate = useNavigate();
   const { url, setUrl, setVideos, setLoading, setError, isLoading } = useConverterStore();
   const [inputFocused, setInputFocused] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragOver(false);
+      const text = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('text/uri-list');
+      if (text && text.includes('youtube')) {
+        setUrl(text.trim());
+      }
+    },
+    [setUrl],
+  );
+
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent) => {
+      const text = e.clipboardData.getData('text');
+      if (text && text.includes('youtube') && !url) {
+        e.preventDefault();
+        setUrl(text.trim());
+      }
+    },
+    [setUrl, url],
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -32,7 +56,13 @@ function HomePage() {
   }
 
   return (
-    <div className="relative overflow-hidden">
+    <div
+      className={`relative overflow-hidden transition-colors ${isDragOver ? 'ring-2 ring-inset ring-brand-400/50' : ''}`}
+      onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+      onDragLeave={() => setIsDragOver(false)}
+      onDrop={handleDrop}
+      onPaste={handlePaste}
+    >
       {/* Background effects */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-brand-400/5 blur-[120px]" />

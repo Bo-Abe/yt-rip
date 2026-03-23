@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
@@ -6,11 +7,21 @@ import { useConverterStore } from '../features/converter/store';
 import { VideoList } from '../components/video/VideoList';
 import { BatchActions } from '../components/video/BatchActions';
 import { FormatSelector } from '../components/video/FormatSelector';
+import { TrimSlider } from '../components/video/TrimSlider';
+import { SizeEstimate } from '../components/video/SizeEstimate';
 import { api } from '../lib/api';
 
 function ResultsPage() {
   const navigate = useNavigate();
   const store = useConverterStore();
+
+  // Average duration of selected videos (for trim slider)
+  const avgDuration = useMemo(() => {
+    const selected = store.videos.filter((v) => store.selectedIds.has(v.id));
+    if (selected.length === 0) return 0;
+    // Use the max duration for the trim slider
+    return Math.max(...selected.map((v) => v.duration));
+  }, [store.videos, store.selectedIds]);
 
   if (store.videos.length === 0) {
     navigate('/');
@@ -27,7 +38,6 @@ function ResultsPage() {
 
     try {
       store.setLoading(true);
-      // Build videoId → title and duration mappings
       const videoTitles: Record<string, string> = {};
       const videoDurations: Record<string, number> = {};
       for (const v of store.videos) {
@@ -43,6 +53,7 @@ function ResultsPage() {
         format: store.format,
         audioBitrate: isAudio ? store.audioBitrate : undefined,
         videoQuality: !isAudio ? store.videoQuality : undefined,
+        trim: store.trim ?? undefined,
         embedMetadata: true,
         embedThumbnail: true,
       });
@@ -84,22 +95,40 @@ function ResultsPage() {
 
       {/* Controls */}
       <div className="mb-6 grid gap-4 lg:grid-cols-[1fr_320px]">
-        <BatchActions
-          totalCount={store.videos.length}
-          selectedCount={store.selectedIds.size}
-          onSelectAll={store.selectAll}
-          onSelectNone={store.selectNone}
-          onConvert={handleConvert}
-          isConverting={store.isLoading}
-        />
-        <FormatSelector
-          format={store.format}
-          audioBitrate={store.audioBitrate}
-          videoQuality={store.videoQuality}
-          onFormatChange={store.setFormat}
-          onBitrateChange={store.setAudioBitrate}
-          onQualityChange={store.setVideoQuality}
-        />
+        <div className="space-y-4">
+          <BatchActions
+            totalCount={store.videos.length}
+            selectedCount={store.selectedIds.size}
+            onSelectAll={store.selectAll}
+            onSelectNone={store.selectNone}
+            onConvert={handleConvert}
+            isConverting={store.isLoading}
+          />
+          <SizeEstimate
+            videos={store.videos}
+            selectedIds={store.selectedIds}
+            format={store.format}
+            audioBitrate={store.audioBitrate}
+            videoQuality={store.videoQuality}
+            trimDuration={store.trim ? store.trim.end - store.trim.start : null}
+          />
+        </div>
+        <div className="space-y-4">
+          <FormatSelector
+            format={store.format}
+            audioBitrate={store.audioBitrate}
+            videoQuality={store.videoQuality}
+            onFormatChange={store.setFormat}
+            onBitrateChange={store.setAudioBitrate}
+            onQualityChange={store.setVideoQuality}
+          />
+          {avgDuration > 0 && store.selectedIds.size === 1 && (
+            <TrimSlider
+              duration={avgDuration}
+              onTrimChange={store.setTrim}
+            />
+          )}
+        </div>
       </div>
 
       {/* Video grid */}
