@@ -1,6 +1,10 @@
 import ffmpeg from 'fluent-ffmpeg';
 import path from 'path';
 import fs from 'fs/promises';
+
+if (process.env.FFMPEG_PATH) {
+  ffmpeg.setFfmpegPath(process.env.FFMPEG_PATH);
+}
 import { v4 as uuidv4 } from 'uuid';
 import type {
   OutputFormat,
@@ -54,6 +58,7 @@ function updateJob(jobId: string, update: Partial<ConversionJob>): void {
 export async function startConversion(params: {
   videoId: string;
   videoTitle: string;
+  videoDuration: number;
   format: OutputFormat;
   audioBitrate?: AudioBitrate;
   videoQuality?: VideoQuality;
@@ -64,7 +69,12 @@ export async function startConversion(params: {
   const jobId = uuidv4();
   const isAudio = ['mp3', 'wav', 'flac', 'm4a'].includes(params.format);
   const ext = params.format;
-  const safeTitle = params.videoTitle.replace(/[^a-zA-Z0-9_\-\s]/g, '').trim().slice(0, 80);
+  // Keep unicode chars (Asian languages etc.), only strip filesystem-unsafe chars
+  const safeTitle = params.videoTitle
+    .replace(/[<>:"/\\|?*\x00-\x1f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 120) || params.videoId;
   const outputFilename = `${safeTitle}_${jobId.slice(0, 8)}.${ext}`;
   const outputPath = path.join(TEMP_DIR, outputFilename);
 
@@ -94,6 +104,7 @@ async function processConversion(
   job: ConversionJob,
   params: {
     videoId: string;
+    videoDuration: number;
     format: OutputFormat;
     audioBitrate?: AudioBitrate;
     videoQuality?: VideoQuality;
@@ -145,13 +156,26 @@ async function processConversion(
       if (params.format === 'mp4') {
         cmd = cmd.videoCodec('libx264').audioCodec('aac');
       } else if (params.format === 'webm') {
-        cmd = cmd.videoCodec('libvpx-vp9').audioCodec('libopus');
+        cmd = cmd.videoCodec('libvpx').audioCodec('libvorbis')
+          .addOptions(['-cpu-used', '4', '-deadline', 'realtime', '-b:v', '2M']);
       }
     }
 
+    const totalDuration = params.videoDuration || 0;
+
     cmd
       .on('progress', (info) => {
-        const pct = Math.min(95, 40 + (info.percent || 0) * 0.55);
+        let pct = 40;
+        if (info.percent && info.percent > 0) {
+          // Use percent if ffmpeg provides it
+          pct = Math.min(95, 40 + info.percent * 0.55);
+        } else if (totalDuration > 0 && info.timemark) {
+          // Parse timemark "HH:MM:SS.ms" to calculate progress
+          const parts = info.timemark.split(':').map(Number);
+          const currentSec = (parts[0] || 0) * 3600 + (parts[1] || 0) * 60 + (parts[2] || 0);
+          const ratio = Math.min(1, currentSec / totalDuration);
+          pct = Math.min(95, 40 + ratio * 55);
+        }
         updateJob(job.id, { progress: Math.round(pct) });
       })
       .on('end', () => resolve())

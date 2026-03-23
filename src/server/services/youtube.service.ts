@@ -1,11 +1,22 @@
-import { execFile } from 'child_process';
+import { exec } from 'child_process';
 import { promisify } from 'util';
 import type { VideoInfo } from '../../shared/types.js';
 import { AppError } from '../middleware/errorHandler.js';
 
-const execFileAsync = promisify(execFile);
+const execAsync = promisify(exec);
 
-const YTDLP = process.env.YTDLP_PATH || 'yt-dlp';
+function getYtdlp(): string {
+  const p = process.env.YTDLP_PATH || 'yt-dlp';
+  const bin = p.includes(' ') ? `"${p}"` : p;
+
+  // yt-dlp needs ffmpeg to merge video+audio streams
+  const ffmpegPath = process.env.FFMPEG_PATH;
+  if (ffmpegPath) {
+    const ffmpegDir = ffmpegPath.replace(/[/\\][^/\\]+$/, '');
+    return `${bin} --ffmpeg-location "${ffmpegDir}"`;
+  }
+  return bin;
+}
 
 interface YtdlpVideoEntry {
   id: string;
@@ -34,7 +45,8 @@ export async function fetchVideos(url: string): Promise<{
       url,
     ];
 
-    const { stdout } = await execFileAsync(YTDLP, args, {
+    const cmd = `${getYtdlp()} ${args.join(' ')}`;
+    const { stdout } = await execAsync(cmd, {
       timeout: 60_000,
       maxBuffer: 50 * 1024 * 1024, // 50MB for large playlists
     });
@@ -72,12 +84,8 @@ export async function fetchVideos(url: string): Promise<{
 
 export async function getVideoStreamUrl(videoId: string, format: 'audio' | 'video'): Promise<string> {
   const formatArg = format === 'audio' ? 'bestaudio' : 'bestvideo+bestaudio';
-  const { stdout } = await execFileAsync(YTDLP, [
-    '-f', formatArg,
-    '-g',
-    '--no-warnings',
-    `https://www.youtube.com/watch?v=${videoId}`,
-  ], { timeout: 30_000 });
+  const cmd = `${getYtdlp()} -f ${formatArg} -g --no-warnings "https://www.youtube.com/watch?v=${videoId}"`;
+  const { stdout } = await execAsync(cmd, { timeout: 30_000 });
 
   return stdout.trim().split('\n')[0] || '';
 }
@@ -88,13 +96,9 @@ export async function downloadVideo(
   format: 'audio' | 'video',
 ): Promise<string> {
   const formatArg = format === 'audio' ? 'bestaudio' : 'bestvideo+bestaudio/best';
-  const { stdout } = await execFileAsync(YTDLP, [
-    '-f', formatArg,
-    '-o', outputPath,
-    '--no-warnings',
-    '--no-playlist',
-    `https://www.youtube.com/watch?v=${videoId}`,
-  ], { timeout: 300_000 }); // 5 min max
+  const mergeArg = format === 'video' ? ' --merge-output-format mkv' : '';
+  const cmd = `${getYtdlp()} -f ${formatArg}${mergeArg} -o "${outputPath}" --no-warnings --no-playlist "https://www.youtube.com/watch?v=${videoId}"`;
+  const { stdout } = await execAsync(cmd, { timeout: 300_000 }); // 5 min max
 
   return stdout.trim();
 }

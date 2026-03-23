@@ -20,7 +20,8 @@ conversionsRouter.post('/', validate(conversionRequestSchema), async (req, res, 
     for (const videoId of params.videoIds) {
       const job = await startConversion({
         videoId,
-        videoTitle: videoId, // Will be enriched by the service
+        videoTitle: params.videoTitles?.[videoId] || videoId,
+        videoDuration: params.videoDurations?.[videoId] || 0,
         format: params.format,
         audioBitrate: params.audioBitrate,
         videoQuality: params.videoQuality,

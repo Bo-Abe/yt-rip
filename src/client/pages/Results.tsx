@@ -27,8 +27,19 @@ function ResultsPage() {
 
     try {
       store.setLoading(true);
+      // Build videoId → title and duration mappings
+      const videoTitles: Record<string, string> = {};
+      const videoDurations: Record<string, number> = {};
+      for (const v of store.videos) {
+        if (store.selectedIds.has(v.id)) {
+          videoTitles[v.id] = v.title;
+          videoDurations[v.id] = v.duration;
+        }
+      }
       const result = await api.startConversions({
         videoIds: Array.from(store.selectedIds),
+        videoTitles,
+        videoDurations,
         format: store.format,
         audioBitrate: isAudio ? store.audioBitrate : undefined,
         videoQuality: !isAudio ? store.videoQuality : undefined,

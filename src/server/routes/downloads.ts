@@ -31,7 +31,13 @@ downloadsRouter.get('/:id', (req, res, next) => {
     }
 
     const filename = path.basename(job.filePath);
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    // RFC 5987: encode non-ASCII chars for Content-Disposition
+    const asciiName = filename.replace(/[^\x20-\x7E]/g, '_');
+    const encodedName = encodeURIComponent(filename).replace(/'/g, '%27');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`,
+    );
     res.setHeader('Content-Type', 'application/octet-stream');
 
     const stream = fs.createReadStream(job.filePath);

@@ -23,6 +23,8 @@ export interface TrimOptions {
 
 export interface ConversionRequest {
   videoIds: string[];
+  videoTitles?: Record<string, string>;
+  videoDurations?: Record<string, number>;
   format: OutputFormat;
   audioBitrate?: AudioBitrate;
   videoQuality?: VideoQuality;

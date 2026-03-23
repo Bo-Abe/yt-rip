@@ -22,8 +22,13 @@ export const trimSchema = z.object({
 
 export const conversionRequestSchema = z.object({
   videoIds: z.array(z.string()).min(1, 'Sélectionnez au moins une vidéo'),
+  videoTitles: z.record(z.string(), z.string()).optional(),
+  videoDurations: z.record(z.string(), z.number()).optional(),
   format: z.enum(allFormats),
-  audioBitrate: z.enum(audioBitrates.map(String) as [string, ...string[]]).transform(Number).optional(),
+  audioBitrate: z.union([
+    z.number().refine((n) => (audioBitrates as readonly number[]).includes(n)),
+    z.string().transform(Number).refine((n) => (audioBitrates as readonly number[]).includes(n)),
+  ]).optional(),
   videoQuality: z.enum(videoQualities).optional(),
   trim: trimSchema.optional(),
   embedMetadata: z.boolean().optional().default(true),

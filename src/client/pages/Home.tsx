@@ -110,6 +110,27 @@ function HomePage() {
           </div>
         </motion.form>
 
+        {/* Loading overlay — fixed full screen */}
+        {isLoading && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-surface/80 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <div className="glass-card glow-purple flex flex-col items-center gap-4 px-10 py-8">
+              <motion.div
+                className="h-10 w-10 rounded-full border-4 border-brand-400/30 border-t-brand-400"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              />
+              <div className="text-center">
+                <p className="text-base font-medium text-white">Fetching videos...</p>
+                <p className="mt-1 text-sm text-white/40">This may take a moment for large channels</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Features */}
         <motion.div
           className="mt-16 grid grid-cols-1 gap-4 sm:grid-cols-3"

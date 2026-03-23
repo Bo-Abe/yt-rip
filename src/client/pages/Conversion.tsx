@@ -4,16 +4,16 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Download, Package } from 'lucide-react';
 import { useConverterStore } from '../features/converter/store';
 import { ProgressCard } from '../components/video/ProgressCard';
-import { useSSE } from '../hooks/useSSE';
+import { useMultiSSE } from '../hooks/useSSE';
 import { api } from '../lib/api';
 
 function ConversionPage() {
   const navigate = useNavigate();
   const { jobs, updateJob } = useConverterStore();
 
-  // Subscribe to SSE for each active job
-  const activeJobId = useMemo(
-    () => jobs.find((j) => j.status !== 'done' && j.status !== 'error')?.id ?? null,
+  // Subscribe to SSE for ALL active jobs
+  const activeJobIds = useMemo(
+    () => jobs.filter((j) => j.status !== 'done' && j.status !== 'error').map((j) => j.id),
     [jobs],
   );
 
@@ -24,7 +24,7 @@ function ConversionPage() {
     [updateJob],
   );
 
-  useSSE(activeJobId, handleSSEUpdate);
+  useMultiSSE(activeJobIds, handleSSEUpdate);
 
   const completedJobs = jobs.filter((j) => j.status === 'done');
   const allDone = jobs.length > 0 && jobs.every((j) => j.status === 'done' || j.status === 'error');
