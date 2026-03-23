@@ -1,5 +1,7 @@
 import 'dotenv/config';
 
+import path from 'path';
+import { fileURLToPath } from 'url';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -11,6 +13,9 @@ import { downloadsRouter } from './routes/downloads.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { rateLimiter } from './middleware/rateLimit.js';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const isProduction = process.env.NODE_ENV === 'production';
+
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
 
@@ -21,9 +26,19 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(rateLimiter);
 
+// API routes
 app.use('/api/v1/videos', videosRouter);
 app.use('/api/v1/conversions', conversionsRouter);
 app.use('/api/v1/downloads', downloadsRouter);
+
+// Serve frontend in production
+if (isProduction) {
+  const clientDir = path.join(__dirname, '../client');
+  app.use(express.static(clientDir));
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(clientDir, 'index.html'));
+  });
+}
 
 app.use(errorHandler);
 

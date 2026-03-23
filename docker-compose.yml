@@ -1,0 +1,18 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - TEMP_DIR=/app/tmp
+      - DOWNLOAD_MODE=local
+      - TEMP_FILE_TTL_HOURS=4
+      - MAX_CONCURRENT_CONVERSIONS=3
+    volumes:
+      - tmp_data:/app/tmp
+    restart: unless-stopped
+
+volumes:
+  tmp_data:
