@@ -34,4 +34,4 @@ ENV FFMPEG_PATH=/usr/bin/ffmpeg
 
 EXPOSE 3001
 
-CMD ["node", "dist/server/index.js"]
+CMD ["node", "dist/server/server/index.js"]

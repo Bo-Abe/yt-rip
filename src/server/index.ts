@@ -33,7 +33,7 @@ app.use('/api/v1/downloads', downloadsRouter);
 
 // Serve frontend in production
 if (isProduction) {
-  const clientDir = path.join(__dirname, '../client');
+  const clientDir = path.join(__dirname, '../../client');
   app.use(express.static(clientDir));
   app.get('*', (_req, res) => {
     res.sendFile(path.join(clientDir, 'index.html'));
